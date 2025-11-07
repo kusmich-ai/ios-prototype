@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Check, X, RotateCcw } from 'lucide-react';
 
 export default function IOSBaselineAssessment() {
   const [stage, setStage] = useState('welcome');
@@ -105,7 +104,6 @@ export default function IOSBaselineAssessment() {
   };
 
   const handleNext = () => {
-    // Store response
     const key = `${section.id}_q${currentQuestion}`;
     setResponses(prev => ({
       ...prev,
@@ -115,18 +113,15 @@ export default function IOSBaselineAssessment() {
       }
     }));
 
-    // Move to next question or section
     if (currentQuestion < section.questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
       setSelectedValue(null);
     } else {
-      // Section complete
       if (currentSection < sections.length - 1) {
         setCurrentSection(prev => prev + 1);
         setCurrentQuestion(0);
         setSelectedValue(null);
       } else {
-        // All regular sections complete, move to BCT
         setStage('bct_intro');
       }
     }
@@ -144,18 +139,15 @@ export default function IOSBaselineAssessment() {
     if (bctBreaths < 8) {
       setBctBreaths(prev => prev + 1);
     } else {
-      // Miscount - pressed breath after 8
       completeBCT(180 - bctTime, 'Miscount: Pressed breath after 8');
     }
   };
 
   const handleCompleteCycle = () => {
     if (bctBreaths === 8) {
-      // Correct!
       setBctCycles(prev => prev + 1);
       setBctBreaths(0);
     } else {
-      // Wrong count
       completeBCT(180 - bctTime, `Miscount: Completed at breath ${bctBreaths}`);
     }
   };
@@ -169,13 +161,10 @@ export default function IOSBaselineAssessment() {
     setBctActive(false);
     const score = (elapsedSeconds / 180) * 5;
     setBctScore(score);
-    
-    // Calculate final results
     calculateResults(elapsedSeconds, score);
   };
 
   const calculateResults = async (bctElapsed, bctScore) => {
-    // Calculate scores for each section
     const sectionScores = {};
     
     sections.forEach(section => {
@@ -187,7 +176,6 @@ export default function IOSBaselineAssessment() {
         const response = responses[key];
         if (response) {
           let value = response.value;
-          // Reverse scoring if needed
           if (response.reverse) {
             value = 4 - value;
           }
@@ -196,15 +184,12 @@ export default function IOSBaselineAssessment() {
         }
       });
       
-      // Convert to 0-5 scale
       const rawScore = sum / count;
       sectionScores[section.id] = rawScore;
     });
 
-    // Add BCT score
     sectionScores.presence_test = bctScore;
 
-    // Calculate domain scores (0-5 scale)
     const domainScores = {
       regulation: sectionScores.calm_core,
       awareness: sectionScores.observer_index,
@@ -212,12 +197,10 @@ export default function IOSBaselineAssessment() {
       attention: (sectionScores.focus_diagnostic + sectionScores.presence_test) / 2
     };
 
-    // Calculate REwired Index (0-100 scale)
     const sum = Object.values(domainScores).reduce((a, b) => a + b, 0);
     const average = sum / 4;
     const rewiredIndex = Math.round(average * 20);
 
-    // Determine tier
     let tier = '';
     if (rewiredIndex >= 81) tier = 'Integrated (Embodied)';
     else if (rewiredIndex >= 61) tier = 'Optimized (Coherent)';
@@ -234,47 +217,32 @@ export default function IOSBaselineAssessment() {
       timestamp: new Date().toISOString()
     };
 
-    // Store all data
     await storeBaselineData(sectionScores, resultsData);
-
     setResults(resultsData);
     setStage('results');
   };
 
   const storeBaselineData = async (sectionScores, resultsData) => {
     try {
-      // Store individual section scores
       await window.storage.set('ios:baseline:calm_core', JSON.stringify(sectionScores.calm_core));
       await window.storage.set('ios:baseline:observer_index', JSON.stringify(sectionScores.observer_index));
       await window.storage.set('ios:baseline:vitality_index', JSON.stringify(sectionScores.vitality_index));
       await window.storage.set('ios:baseline:focus_diagnostic', JSON.stringify(sectionScores.focus_diagnostic));
       await window.storage.set('ios:baseline:presence_test', JSON.stringify(sectionScores.presence_test));
-      
-      // Store domain scores
       await window.storage.set('ios:baseline:domain_scores', JSON.stringify(resultsData.domainScores));
-      
-      // Store REwired Index
       await window.storage.set('ios:baseline:rewired_index', JSON.stringify(resultsData.rewiredIndex));
       await window.storage.set('ios:baseline:tier', JSON.stringify(resultsData.tier));
-      
-      // Store timestamp
       await window.storage.set('ios:baseline:date', JSON.stringify(resultsData.timestamp));
-      
-      // Mark system as initialized
       await window.storage.set('ios:system_initialized', JSON.stringify(true));
-      
-      // Initialize stage tracking
       await window.storage.set('ios:current_stage', JSON.stringify(1));
       await window.storage.set('ios:stage_start_date', JSON.stringify(resultsData.timestamp));
       await window.storage.set('ios:weekly_deltas', JSON.stringify([]));
-      
       console.log('✅ Baseline data stored successfully');
     } catch (error) {
       console.error('❌ Error storing baseline data:', error);
     }
   };
 
-  // Render functions
   if (stage === 'welcome') {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-8 flex items-center justify-center">
@@ -348,7 +316,6 @@ export default function IOSBaselineAssessment() {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-8">
         <div className="max-w-3xl mx-auto">
-          {/* Overall Progress */}
           <div className="mb-6">
             <div className="flex justify-between text-sm text-gray-400 mb-2">
               <span>Overall Progress</span>
@@ -362,7 +329,6 @@ export default function IOSBaselineAssessment() {
             </div>
           </div>
 
-          {/* Section Info */}
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-2xl font-bold">{section.name}</h2>
@@ -371,7 +337,6 @@ export default function IOSBaselineAssessment() {
             <p className="text-gray-400 text-sm">{section.description}</p>
           </div>
 
-          {/* Question Card */}
           <div className="bg-gray-800 rounded-lg p-8">
             <div className="mb-6">
               <div className="text-sm text-gray-400 mb-4">
@@ -380,7 +345,6 @@ export default function IOSBaselineAssessment() {
               <p className="text-xl mb-8">{question.text}</p>
             </div>
 
-            {/* Response Options */}
             <div className="space-y-3 mb-8">
               {section.scaleLabels.map((label, idx) => (
                 <button
@@ -395,14 +359,13 @@ export default function IOSBaselineAssessment() {
                   <div className="flex items-center justify-between">
                     <span>{label}</span>
                     {selectedValue === idx && (
-                      <Check className="w-5 h-5 text-orange-500" />
+                      <span className="text-orange-500 text-xl">✓</span>
                     )}
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Section Progress */}
             <div className="mb-6">
               <div className="w-full bg-gray-700 rounded-full h-1">
                 <div 
@@ -412,7 +375,6 @@ export default function IOSBaselineAssessment() {
               </div>
             </div>
 
-            {/* Next Button */}
             <button
               onClick={handleNext}
               disabled={selectedValue === null}
@@ -478,7 +440,7 @@ export default function IOSBaselineAssessment() {
               onClick={startBCT}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              <Play className="w-5 h-5" />
+              <span className="text-xl">▶</span>
               Start 3-Minute Test
             </button>
           </div>
@@ -492,7 +454,6 @@ export default function IOSBaselineAssessment() {
       <div className="min-h-screen bg-gray-900 text-white p-8 flex items-center justify-center">
         <div className="max-w-2xl w-full">
           <div className="bg-gray-800 rounded-lg p-8">
-            {/* Timer */}
             <div className="text-center mb-8">
               <div className="text-6xl font-bold text-orange-500 mb-2">
                 {formatTime(bctTime)}
@@ -500,13 +461,11 @@ export default function IOSBaselineAssessment() {
               <div className="text-gray-400">Time Remaining</div>
             </div>
 
-            {/* Cycles Counter */}
             <div className="text-center mb-8">
               <div className="text-4xl font-bold mb-2">{bctCycles}</div>
               <div className="text-gray-400">Cycles Completed</div>
             </div>
 
-            {/* Instructions */}
             <div className="text-center mb-8">
               <div className="text-gray-400 text-lg mb-2">
                 Count breaths 1-8 internally
@@ -516,7 +475,6 @@ export default function IOSBaselineAssessment() {
               </div>
             </div>
 
-            {/* Buttons */}
             <div className="space-y-4">
               <button
                 onClick={handleBreath}
@@ -556,14 +514,12 @@ export default function IOSBaselineAssessment() {
             <p className="text-gray-400">Your transformation starting point has been established</p>
           </div>
 
-          {/* REwired Index */}
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-8 mb-6 text-center">
             <div className="text-sm font-semibold text-orange-100 mb-2">REwired Index</div>
             <div className="text-7xl font-bold mb-2">{results.rewiredIndex}</div>
             <div className="text-xl font-semibold text-orange-100">{results.tier}</div>
           </div>
 
-          {/* Domain Scores */}
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
             <h2 className="text-xl font-bold mb-6">Domain Breakdown</h2>
             <div className="space-y-6">
@@ -584,7 +540,6 @@ export default function IOSBaselineAssessment() {
             </div>
           </div>
 
-          {/* What This Means */}
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
             <h2 className="text-xl font-bold mb-4">What This Means</h2>
             <p className="text-gray-300 mb-4">
@@ -597,7 +552,6 @@ export default function IOSBaselineAssessment() {
             </p>
           </div>
 
-          {/* Next Steps */}
           <div className="bg-orange-500 bg-opacity-10 border border-orange-500 rounded-lg p-6 mb-6">
             <h2 className="text-xl font-bold mb-4">What's Next</h2>
             <p className="text-gray-300 mb-4">
